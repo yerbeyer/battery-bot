@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: batterybot
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_dev_password}
+      POSTGRES_DB: battery_bot
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U batterybot -d battery_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # پورت دیتابیس را فقط برای دیباگ لوکال باز می‌کنیم؛ در production
+    # می‌توانید این بخش را حذف کنید تا دیتابیس فقط از داخل شبکه‌ی داکر در
+    # دسترس باشد (همان توصیه‌ی پروژه‌ی قبلی).
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://batterybot:${DB_PASSWORD:-changeme_dev_password}@db:5432/battery_bot
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      STT_PROVIDER: ${STT_PROVIDER:-groq}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      VISION_PROVIDER: ${VISION_PROVIDER:-gemini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  db_data:

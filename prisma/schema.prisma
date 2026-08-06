@@ -1,0 +1,44 @@
+// اسکیمای فاز ۰ — فقط برای اثبات اتصال بات↔دیتابیس. مدل‌های واقعی
+// (Transaction, InventoryItem, Customer) در فاز ۱ و ۲ طبق ROADMAP.md اضافه
+// می‌شوند. اینجا عمداً حداقلی نگه داشته شده تا فاز ۰ سبک و سریع تست شود.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// وضعیت مکالمه‌ی هر چت تلگرام. الگوی state machine از پروژه‌ی قبلی
+/// (تسویه‌یار) گرفته شده: هر state یک رشته‌ی ساده است (مثلاً
+/// "AWAITING_CONFIRM:someId")، و contextJson داده‌ی موقتِ بین مراحل را نگه
+/// می‌دارد. این مدل مستقل از منطق دامنه است — فقط "کجای مکالمه هستیم" را
+/// نگه می‌دارد، نه خودِ تراکنش‌ها.
+model BotSession {
+  id          String   @id @default(cuid())
+  chatId      String   @unique
+  state       String   @default("IDLE")
+  contextJson String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// یک رکورد لاگ ساختاریافته، فقط برای فاز ۰ که بتوانیم از پنل مدیریتی هم
+/// لاگ‌ها را ببینیم (علاوه بر stdout/docker logs). در فازهای بعد ممکن است
+/// این جدول به‌خاطر حجم به یک سرویس خارجی (Loki و غیره) منتقل شود — فعلاً
+/// برای سادگی همینجا کافی است.
+model LogEntry {
+  id        String   @id @default(cuid())
+  requestId String
+  level     String
+  module    String
+  step      String
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@index([createdAt])
+}
